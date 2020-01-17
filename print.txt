@@ -1,0 +1,5 @@
+in python, to print to the tmerinal, you use the following statement:
+
+print("Hello, World.")
+
+
