@@ -66,7 +66,7 @@ def post_add_test():
     check_result = verify_add_test_info(in_dict)                 #Verify the json contains the correct keys and data
     if check_result is not True:
         return check_result, 400                                    #If data is bad, reject request with bad status to client
-    if is_patient_in_database(in_dict["id"]) is False               #Verify that the patient id exists in database
+    if is_patient_in_database(in_dict["id"]) is False:              #Verify that the patient id exists in database
         return "Patient {} is not found on server".format(in_dict["id"]), 400
     add_result = add_test_to_patient(in_dict)
     if add_result: #if True add test results to indicated patient
@@ -77,7 +77,7 @@ def post_add_test():
 
 def verify_add_test_info(in_dict):
    # {"id": int, "test_name": str, "test_result", int}
-    expected_keys = ("name", "id", "test_result")
+    expected_keys = ("id", "test_name", "test_result")
     expected_types = (int, str, int)
     for i, key in enumerate(expected_keys):
         if key not in in_dict.keys():
@@ -86,7 +86,7 @@ def verify_add_test_info(in_dict):
             return "{} value not correct type".format(key)
     return True
 
-def is_patient_in_database():
+def is_patient_in_database(id):
     for patient in db:
         if patient["id"] == id:
             return True
@@ -96,11 +96,49 @@ def is_patient_in_database():
 def add_test_to_patient(in_dict):
     for patient in db:
         if patient["id"] == in_dict["id"]:
-            patient["tests"].append(in_dict["test_name"],
-                                     in_dict["test_result"])
+            patient["tests"].append((in_dict["test_name"], in_dict[
+                "test_result"]))
             print("db is {}".format(db))
             return True
     return False
+
+
+@app.route("/get_results/<patient_id>", methods = ["GET"]) #gives you
+# specific results based on "patient_id"
+def get_get_results(patient_id):
+    check_result = verify_get_results_input(patient_id)
+    if type(check_result) is str:
+        return check_result, 400
+    answer = generate_test_results_string(check_result)
+    if answer is False:
+        return "Uknown Error", 400
+    else:
+        return answer, 200
+
+
+def verify_get_results_input(patient_id):
+    try:
+        id = int(patient_id)
+    except ValueError:
+        return "Bad patient id in URL"
+    if is_patient_in_database(id) is False:
+        return "Patient id {} does not exist in database".format(id)
+    return id
+
+
+def generate_test_results_string(patient_id):
+    for patient in db:
+        if patient["id"] == patient_id:
+            if len(patient["tests"]) == 0:
+                return "No test Results available"
+            out_string = ""
+            for test_results in patient["tests"]:  # go through all test results in patient tests
+                out_string += "{}: {}".format(test_results[0],
+                                              test_results[1])
+                                                #test name, test result
+                return out_string
+            return False
+
 
 if __name__ == '__main__':
     init_database() #starts code with intial patient data before server
